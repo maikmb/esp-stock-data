@@ -1,0 +1,19 @@
+dependencies:
+  idf:
+    version: ">=5.3"
+
+  # ESP32-P4 has no native radio; WiFi runs over the onboard ESP32-C6 via
+  # esp-hosted, exposed through the same esp_wifi.h API by this component.
+  espressif/esp_wifi_remote:
+    version: ">=0.1.12"
+    rules:
+      - if: "target in [esp32p4, esp32h2]"
+
+  lvgl/lvgl:
+    version: "^9.2"
+
+  espressif/esp_lvgl_port:
+    version: ">=2.4.0"
+
+  espressif/esp_lcd_touch_gt911:
+    version: ">=1.1.0"

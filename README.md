@@ -1,121 +1,71 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- |
+# esp-stock-data
 
-# Wi-Fi Station Example
+Dashboard de mercado financeiro (cripto + ações) numa tela touch, rodando em
+firmware ESP-IDF sobre um ESP32-P4 com display MIPI-DSI de 7".
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+![target](https://img.shields.io/badge/target-esp32p4-blue)
 
-This example shows how to use the Wi-Fi Station functionality of the Wi-Fi driver of ESP for connecting to an Access Point.
+## Hardware
 
-## How to use example
+- **Placa:** Guition JC1060P470 v1.1 (ESP32-P4NRW32 + ESP32-C6-MINI-1U-N4,
+  32MB PSRAM, 16MB flash)
+- **Display:** 7", 1024x600, IPS, painel JD9165 sobre MIPI-DSI (2 lanes)
+- **Touch:** capacitivo GT911 sobre I2C
+- **WiFi/BT:** via ESP32-C6 embarcado (o P4 não tem rádio próprio) ligado por
+  SDIO, usando [esp-hosted](https://github.com/espressif/esp-hosted-mcu)
 
-### Configure the project
+A pinagem usada (`main/board_config.h`) vem da firmware de referência do
+fabricante e **não foi validada contra uma unidade física**. Se o display ou
+o touch não subirem, comece por aí -- veja o aviso em [CLAUDE.md](CLAUDE.md).
 
-Open the project configuration menu (`idf.py menuconfig`).
+## O que faz hoje
 
-In the `Example Configuration` menu:
+- Conecta no WiFi (via ESP32-C6) e mostra o status da conexão (SSID, IP, ícone)
+  numa barra no topo da tela.
+- Busca preço de criptomoedas (CoinGecko) e ações (Alpha Vantage) em HTTPS e
+  mostra um card por símbolo com preço, variação % e "atualizado há Ns".
+- Lista de símbolos monitorados e credenciais configuráveis via
+  `idf.py menuconfig`, sem hardcode no código.
 
-* Set the Wi-Fi configuration.
-    * Set `WiFi SSID`.
-    * Set `WiFi Password`.
+Veja [CLOUD.md](CLOUD.md) para os detalhes de como a conectividade e as APIs
+de mercado estão montadas, e o roadmap do que vem a seguir (tela de
+configuração on-device para adicionar símbolos sem recompilar, etc).
 
-Optional: If you need, change the other options according to your requirements.
+## Build e flash
 
-### Build and Flash
+ESP-IDF `v5.4.4`, alvo `esp32p4`.
 
-Build the project and flash it to the board, then run the monitor tool to view the serial output:
-
-Run `idf.py -p PORT flash monitor` to build, flash and monitor the project.
-
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the Getting Started Guide for all the steps to configure and use the ESP-IDF to build projects.
-
-* [ESP-IDF Getting Started Guide on ESP32](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html)
-* [ESP-IDF Getting Started Guide on ESP32-S2](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html)
-* [ESP-IDF Getting Started Guide on ESP32-C3](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/get-started/index.html)
-
-## Example Output
-Note that the output, in particular the order of the output, may vary depending on the environment.
-
-Console output if station connects to AP successfully:
-```
-I (589) wifi station: ESP_WIFI_MODE_STA
-I (599) wifi: wifi driver task: 3ffc08b4, prio:23, stack:3584, core=0
-I (599) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
-I (599) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
-I (629) wifi: wifi firmware version: 2d94f02
-I (629) wifi: config NVS flash: enabled
-I (629) wifi: config nano formatting: disabled
-I (629) wifi: Init dynamic tx buffer num: 32
-I (629) wifi: Init data frame dynamic rx buffer num: 32
-I (639) wifi: Init management frame dynamic rx buffer num: 32
-I (639) wifi: Init management short buffer num: 32
-I (649) wifi: Init static rx buffer size: 1600
-I (649) wifi: Init static rx buffer num: 10
-I (659) wifi: Init dynamic rx buffer num: 32
-I (759) phy: phy_version: 4180, cb3948e, Sep 12 2019, 16:39:13, 0, 0
-I (769) wifi: mode : sta (30:ae:a4:d9:bc:c4)
-I (769) wifi station: wifi_init_sta finished.
-I (889) wifi: new:<6,0>, old:<1,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (889) wifi: state: init -> auth (b0)
-I (899) wifi: state: auth -> assoc (0)
-I (909) wifi: state: assoc -> run (10)
-I (939) wifi: connected with #!/bin/test, aid = 1, channel 6, BW20, bssid = ac:9e:17:7e:31:40
-I (939) wifi: security type: 3, phy: bgn, rssi: -68
-I (949) wifi: pm start, type: 1
-
-I (1029) wifi: AP's beacon interval = 102400 us, DTIM period = 3
-I (2089) esp_netif_handlers: sta ip: 192.168.77.89, mask: 255.255.255.0, gw: 192.168.77.1
-I (2089) wifi station: got ip:192.168.77.89
-I (2089) wifi station: connected to ap SSID:myssid password:mypassword
+```powershell
+. C:\esp\v5.4.4\esp-idf\export.ps1     # ajuste o caminho se o seu setup for diferente
+idf.py set-target esp32p4              # só na primeira vez / após apagar build/
+idf.py menuconfig                      # configurar WiFi + API keys + símbolos, em
+                                        # "Stock Ticker Configuration"
+idf.py -p COMx build flash monitor
 ```
 
-Console output if the station failed to connect to AP:
+### Configuração (`idf.py menuconfig` → Stock Ticker Configuration)
+
+| Menu | Opção | Descrição |
+|---|---|---|
+| WiFi | SSID / Senha | rede a conectar |
+| Market Data API | Alpha Vantage API key | grátis em alphavantage.co/support/#api-key -- necessária só para ações |
+| Market Data API | CoinGecko coin IDs | ex: `bitcoin,ethereum` (sem key) |
+| Market Data API | Stock symbols | ex: `AAPL,MSFT` (precisa da key acima) |
+| Market Data API | Refresh interval | Alpha Vantage free tier é limitado a 25 req/dia -- veja CLOUD.md |
+
+## Estrutura
+
 ```
-I (589) wifi station: ESP_WIFI_MODE_STA
-I (599) wifi: wifi driver task: 3ffc08b4, prio:23, stack:3584, core=0
-I (599) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
-I (599) system_api: Base MAC address is not set, read default base MAC address from BLK0 of EFUSE
-I (629) wifi: wifi firmware version: 2d94f02
-I (629) wifi: config NVS flash: enabled
-I (629) wifi: config nano formatting: disabled
-I (629) wifi: Init dynamic tx buffer num: 32
-I (629) wifi: Init data frame dynamic rx buffer num: 32
-I (639) wifi: Init management frame dynamic rx buffer num: 32
-I (639) wifi: Init management short buffer num: 32
-I (649) wifi: Init static rx buffer size: 1600
-I (649) wifi: Init static rx buffer num: 10
-I (659) wifi: Init dynamic rx buffer num: 32
-I (759) phy: phy_version: 4180, cb3948e, Sep 12 2019, 16:39:13, 0, 0
-I (759) wifi: mode : sta (30:ae:a4:d9:bc:c4)
-I (769) wifi station: wifi_init_sta finished.
-I (889) wifi: new:<6,0>, old:<1,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (889) wifi: state: init -> auth (b0)
-I (1889) wifi: state: auth -> init (200)
-I (1889) wifi: new:<6,0>, old:<6,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (1889) wifi station: retry to connect to the AP
-I (1899) wifi station: connect to the AP fail
-I (3949) wifi station: retry to connect to the AP
-I (3949) wifi station: connect to the AP fail
-I (4069) wifi: new:<6,0>, old:<6,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (4069) wifi: state: init -> auth (b0)
-I (5069) wifi: state: auth -> init (200)
-I (5069) wifi: new:<6,0>, old:<6,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (5069) wifi station: retry to connect to the AP
-I (5069) wifi station: connect to the AP fail
-I (7129) wifi station: retry to connect to the AP
-I (7129) wifi station: connect to the AP fail
-I (7249) wifi: new:<6,0>, old:<6,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (7249) wifi: state: init -> auth (b0)
-I (8249) wifi: state: auth -> init (200)
-I (8249) wifi: new:<6,0>, old:<6,0>, ap:<255,255>, sta:<6,0>, prof:1
-I (8249) wifi station: retry to connect to the AP
-I (8249) wifi station: connect to the AP fail
-I (10299) wifi station: connect to the AP fail
-I (10299) wifi station: Failed to connect to SSID:myssid, password:mypassword
+main/
+  app_main.c        orquestra o boot: display -> market task -> UI -> wifi
+  board_config.h     pinagem/timings do painel e do touch
+  bsp_display.c/h    bring-up MIPI-DSI + GT911 + LVGL (esp_lvgl_port)
+  wifi_manager.c/h   WiFi station com reconexão automática + status p/ UI
+  market_api.c/h     task de fundo: HTTPS + JSON -> lista de market_item_t
+  ui.c/h             tela LVGL: status WiFi + cards de preço
+components/
+  esp_lcd_jd9165/    driver do painel MIPI-DSI (vendorizado, não está no
+                      component registry)
 ```
 
-## Troubleshooting
-
-For any technical queries, please open an [issue](https://github.com/espressif/esp-idf/issues) on GitHub. We will get back to you soon.
+Contexto de arquitetura mais detalhado em [CLAUDE.md](CLAUDE.md).

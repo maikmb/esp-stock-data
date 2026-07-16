@@ -1,2 +1,25 @@
-idf_component_register(SRCS "station_example_main.c"
-                    INCLUDE_DIRS ".")
+idf_component_register(
+    SRCS
+        "app_main.c"
+        "wifi_manager.c"
+        "bsp_display.c"
+        "market_api.c"
+        "ui.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        esp_wifi
+        esp_event
+        esp_netif
+        nvs_flash
+        esp_http_client
+        esp-tls
+        mbedtls
+        json
+        esp_timer
+        driver
+        esp_hw_support
+        lvgl
+        esp_lvgl_port
+        esp_lcd_jd9165
+        esp_lcd_touch_gt911
+)
