@@ -3,6 +3,7 @@
 #include "wifi_manager.h"
 #include "market_api.h"
 #include "ui.h"
+#include "ui_touch_debug.h"
 
 static const char *TAG = "app_main";
 
@@ -27,6 +28,9 @@ void app_main(void)
 
     if (bsp_display_lock(0)) {
         ui_init();
+        // TEMP: touch tester overlay (dot follows finger + coords logged to
+        // the monitor). Remove once GT911 touch is confirmed working.
+        ui_touch_debug_init();
         bsp_display_unlock();
     } else {
         ESP_LOGE(TAG, "could not take LVGL lock to build UI");

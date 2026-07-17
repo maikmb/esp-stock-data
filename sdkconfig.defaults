@@ -35,3 +35,7 @@ CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
 # Font sizes used by ui.c for the market cards.
 CONFIG_LV_FONT_MONTSERRAT_20=y
 CONFIG_LV_FONT_MONTSERRAT_28=y
+# LVGL's builtin sprintf has %f disabled unless this is set (PRINTF_DISABLE_SUPPORT_FLOAT
+# = !LV_USE_FLOAT in lv_sprintf_builtin.c) -- without it, lv_label_set_text_fmt("$%.2f", ...)
+# silently prints the literal conversion char ("$f") instead of the number.
+CONFIG_LV_USE_FLOAT=y

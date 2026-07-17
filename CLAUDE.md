@@ -31,6 +31,10 @@ touch, rodando em uma placa ESP32-P4 com display MIPI-DSI de 7".
 - `market_api.c/h` — task em background que consulta CoinGecko (cripto) e
   Alpha Vantage (ações) via HTTPS/cJSON e mantém uma lista de `market_item_t`
 - `ui.c/h` — tela LVGL: barra de status WiFi + cards de preço por símbolo
+- `ui_wifi.c/h` — painel WiFi em overlay: scan de redes, conectar com senha
+  via teclado na tela, detalhes da conexão + desconectar. Só usa a API do
+  `wifi_manager` (nunca `esp_wifi.h` direto)
+- `ui_theme.h` — paleta de cores compartilhada da UI
 - `app_main.c` — orquestra a ordem de start: display → market task → UI →
   wifi
 
@@ -51,7 +55,14 @@ component registry).
   `managed_components/` no build (também não versionado).
 - Toda chamada LVGL fora da própria task do `esp_lvgl_port` precisa do lock
   (`bsp_display_lock()` / `bsp_display_unlock()`) — ver `ui_update_wifi_status`
-  e `ui_refresh_market` como exemplo.
+  e `ui_refresh_market` como exemplo. O lock é recursivo, então callbacks
+  aninhados podem tomá-lo de novo sem deadlock.
+- Credenciais WiFi escolhidas pela tela ficam em NVS (namespace `wifi_cfg`)
+  e têm prioridade sobre `CONFIG_ESP_WIFI_SSID`/`PASSWORD` no boot — o
+  Kconfig é só fallback de primeiro uso.
+- As fontes Montserrat embutidas do LVGL só cobrem ASCII — não use acentos
+  em strings exibidas na tela (por isso "BOLSA"/"atras" em vez de
+  "AÇÃO"/"atrás").
 
 ## Build
 
@@ -66,9 +77,9 @@ idf.py -p COMx flash monitor
 
 ## Roadmap (contexto do que vem a seguir)
 
-Este é o v1: lista fixa de símbolos definida via Kconfig. A ideia do projeto
-é evoluir para permitir adicionar/remover índices pela própria tela touch
-(persistindo em NVS) e trocar de provedor de API sem reescrever `ui.c`. Ao
-adicionar essa tela de configuração, mantenha `market_api.c` como a única
-camada que fala com as APIs externas -- `ui.c` não deve saber nada sobre
-CoinGecko/Alpha Vantage.
+O WiFi já é configurável pela tela (`ui_wifi.c`: scan + senha + NVS). O
+próximo passo é o equivalente para os símbolos monitorados:
+adicionar/remover índices pela própria tela touch (persistindo em NVS) e
+trocar de provedor de API sem reescrever `ui.c`. Ao adicionar essa tela de
+configuração, mantenha `market_api.c` como a única camada que fala com as
+APIs externas -- `ui.c` não deve saber nada sobre CoinGecko/Alpha Vantage.

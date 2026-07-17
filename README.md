@@ -45,6 +45,11 @@ firmware ESP-IDF (C) sobre um ESP32-P4 com display MIPI-DSI de 7".
 
 - Conecta no WiFi (via ESP32-C6 embarcado) e mostra o status da conexão
   (ícone colorido, SSID, IP) numa barra fixa no topo da tela.
+- **Gerenciamento de WiFi pela tela**: tocar no ícone WiFi abre um painel —
+  desconectado, ele escaneia as redes próximas e permite conectar digitando a
+  senha num teclado na tela; conectado, mostra detalhes da conexão (IP,
+  sinal, gateway, canal, BSSID) e um botão de desconectar. A rede escolhida
+  fica salva em NVS e tem prioridade sobre o SSID/senha do Kconfig no boot.
 - Busca preço de criptomoedas (CoinGecko) e ações (Alpha Vantage) por HTTPS
   em background e mostra um card por símbolo: preço, variação % (colorida
   verde/vermelho) e "atualizado há Ns".
@@ -75,9 +80,11 @@ wifi_manager_start()  -- conecta WiFi; status atualiza a UI por callback
 |---|---|
 | [main/board_config.h](main/board_config.h) | Pinagem e timings do painel/touch (única fonte de verdade sobre hardware) |
 | [main/bsp_display.c/h](main/bsp_display.c) | Bring-up do display MIPI-DSI (painel JD9165) + touch GT911 + LVGL via `esp_lvgl_port`. Expõe `bsp_display_lock()`/`unlock()` |
-| [main/wifi_manager.c/h](main/wifi_manager.c) | WiFi station, reconexão automática com backoff, expõe status via callback + snapshot thread-safe |
+| [main/wifi_manager.c/h](main/wifi_manager.c) | WiFi station: conexão/reconexão com backoff, scan de redes, connect/disconnect sob demanda, credenciais em NVS (prioridade sobre Kconfig). Único módulo que fala com `esp_wifi.h` |
 | [main/market_api.c/h](main/market_api.c) | Task de fundo: HTTPS + cJSON contra CoinGecko/Alpha Vantage → lista de `market_item_t` thread-safe |
 | [main/ui.c/h](main/ui.c) | Tela LVGL: barra de status WiFi + grade de cards de preço. Só conhece `market_item_t`, nunca fala com as APIs diretamente |
+| [main/ui_wifi.c/h](main/ui_wifi.c) | Painel WiFi (overlay): lista de redes escaneadas, teclado de senha, detalhes da conexão + desconectar. Só usa a API do `wifi_manager` |
+| [main/ui_theme.h](main/ui_theme.h) | Paleta de cores compartilhada entre os módulos de UI |
 | [main/app_main.c](main/app_main.c) | Orquestra a ordem de inicialização acima |
 | [components/esp_lcd_jd9165/](components/esp_lcd_jd9165/) | Driver do painel MIPI-DSI, vendorizado da firmware do fabricante (não existe no component registry do ESP-IDF) |
 
@@ -165,6 +172,8 @@ main/
   wifi_manager.c/h      WiFi station com reconexão automática + status p/ UI
   market_api.c/h        task de fundo: HTTPS + JSON -> lista de market_item_t
   ui.c/h                 tela LVGL: status WiFi + cards de preço
+  ui_wifi.c/h            painel WiFi: scan de redes, senha via teclado, detalhes
+  ui_theme.h             cores compartilhadas da UI
   Kconfig.projbuild     opções de menuconfig (WiFi, símbolos, API keys)
   idf_component.yml    dependências gerenciadas (lvgl, esp_lvgl_port, ...)
 components/
@@ -207,7 +216,7 @@ Tudo em **Stock Ticker Configuration**:
 
 | Menu | Opção | Descrição |
 |---|---|---|
-| WiFi | SSID / Senha | rede a conectar |
+| WiFi | SSID / Senha | fallback de primeiro boot — a rede escolhida no painel WiFi da tela fica em NVS (namespace `wifi_cfg`) e tem prioridade |
 | WiFi | Fast retry attempts | tentativas rápidas antes de cair pro backoff de 15s |
 | Market Data API | Alpha Vantage API key | grátis em [alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) — necessária só para ações |
 | Market Data API | CoinGecko coin IDs | ex: `bitcoin,ethereum` (sem key necessária) |
@@ -258,6 +267,8 @@ PSRAM/TLS/partição/fontes) — nunca SSID, senha ou API key.
 
 ## Roadmap
 
+- ~~Configurar o WiFi pela própria tela (scan + senha + NVS)~~ — feito, ver
+  `main/ui_wifi.c`.
 - Tela de configuração na própria interface touch para adicionar/remover
   símbolos em tempo real, persistindo em NVS (hoje é só via Kconfig +
   rebuild).

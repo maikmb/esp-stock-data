@@ -137,12 +137,14 @@ static void fetch_crypto(void)
     static char resp[HTTP_RESP_MAX];
     size_t len = 0;
     if (http_get_json(url, resp, sizeof(resp), &len) != ESP_OK) {
+        ESP_LOGW(TAG, "coingecko: request failed for ids=%s", ids);
         return;
     }
+    ESP_LOGI(TAG, "coingecko: got %d bytes for ids=%s", (int)len, ids);
 
     cJSON *root = cJSON_ParseWithLength(resp, len);
     if (!root) {
-        ESP_LOGW(TAG, "coingecko: bad JSON");
+        ESP_LOGW(TAG, "coingecko: bad JSON: %.200s", resp);
         return;
     }
 
@@ -153,6 +155,7 @@ static void fetch_crypto(void)
         }
         cJSON *entry = cJSON_GetObjectItemCaseSensitive(root, s_items[i].key);
         if (!entry) {
+            ESP_LOGW(TAG, "coingecko: no entry for '%s' in response (check MARKET_CRYPTO_IDS)", s_items[i].key);
             continue;
         }
         cJSON *price = cJSON_GetObjectItemCaseSensitive(entry, "usd");
@@ -160,6 +163,10 @@ static void fetch_crypto(void)
         if (cJSON_IsNumber(price)) {
             s_items[i].price = price->valuedouble;
             s_items[i].valid = true;
+            ESP_LOGI(TAG, "coingecko: %s = $%.2f (%.2f%%)", s_items[i].key, price->valuedouble,
+                     cJSON_IsNumber(chg) ? chg->valuedouble : 0.0);
+        } else {
+            ESP_LOGW(TAG, "coingecko: '%s' entry has no numeric 'usd' field", s_items[i].key);
         }
         if (cJSON_IsNumber(chg)) {
             s_items[i].change_pct = chg->valuedouble;
