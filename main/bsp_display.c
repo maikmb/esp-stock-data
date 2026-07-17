@@ -118,6 +118,13 @@ static esp_err_t bsp_touch_init(lv_display_t *disp)
     const lvgl_port_touch_cfg_t touch_cfg = {
         .disp = disp,
         .handle = tp_handle,
+        // See the BOARD_TOUCH_NATIVE_H_RES/V_RES comment in board_config.h:
+        // this GT911 unit's raw coordinate range is smaller than the panel
+        // resolution and esp_lcd_touch never rescales it on its own.
+        .scale = {
+            .x = (float)BOARD_LCD_H_RES / BOARD_TOUCH_NATIVE_H_RES,
+            .y = (float)BOARD_LCD_V_RES / BOARD_TOUCH_NATIVE_V_RES,
+        },
     };
     ESP_RETURN_ON_FALSE(lvgl_port_add_touch(&touch_cfg), ESP_FAIL, TAG, "lvgl touch register failed");
 

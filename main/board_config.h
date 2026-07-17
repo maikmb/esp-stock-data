@@ -44,6 +44,18 @@ extern "C" {
 #define BOARD_TOUCH_MIRROR_X     false
 #define BOARD_TOUCH_MIRROR_Y     false
 
+// This GT911 unit reports raw coordinates in its own (smaller) calibrated
+// range, not in BOARD_LCD_H_RES/V_RES -- esp_lcd_touch does NOT rescale
+// automatically (x_max/y_max in esp_lcd_touch_config_t are only used for the
+// mirror_x/mirror_y math, never as a scale factor). Confirmed empirically
+// with the on-screen touch tester (main/ui_touch_debug.c): tapping the four
+// corners of the 1024x600 panel reported raw values maxing out around
+// (~780, ~470), consistent with a native touch resolution of 800x480 -- a
+// very common GT911 calibration value reused across panel sizes. The scale
+// below is applied in bsp_touch_init() via lvgl_port_touch_cfg_t.scale.
+#define BOARD_TOUCH_NATIVE_H_RES 800
+#define BOARD_TOUCH_NATIVE_V_RES 480
+
 #ifdef __cplusplus
 }
 #endif
