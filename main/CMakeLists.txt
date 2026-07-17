@@ -5,6 +5,7 @@ idf_component_register(
         "bsp_display.c"
         "market_api.c"
         "ui.c"
+        "ui_wifi.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi

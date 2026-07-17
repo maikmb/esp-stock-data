@@ -1,21 +1,13 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include "ui.h"
+#include "ui_theme.h"
+#include "ui_wifi.h"
 #include "bsp_display.h"
 #include "market_api.h"
 
 #include "lvgl.h"
 #include "esp_timer.h"
-
-#define COLOR_BG        0x14181F
-#define COLOR_CARD_BG   0x1E2530
-#define COLOR_TEXT      0xE8ECF1
-#define COLOR_SUBTEXT   0x8B96A5
-#define COLOR_GREEN     0x33C481
-#define COLOR_RED       0xE5484D
-#define COLOR_WIFI_OK   0x33C481
-#define COLOR_WIFI_BAD  0xE5484D
-#define COLOR_WIFI_MID  0xE0A93E
 
 typedef struct {
     lv_obj_t *card;
@@ -30,6 +22,11 @@ static lv_obj_t *s_wifi_text;
 static lv_obj_t *s_grid;
 static market_card_t s_cards[MARKET_MAX_ITEMS];
 static size_t s_card_count;
+
+static void wifi_box_clicked_cb(lv_event_t *e)
+{
+    ui_wifi_open();
+}
 
 static lv_obj_t *build_top_bar(lv_obj_t *parent)
 {
@@ -52,6 +49,9 @@ static lv_obj_t *build_top_bar(lv_obj_t *parent)
     lv_obj_set_flex_flow(status_box, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(status_box, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(status_box, 8, 0);
+    lv_obj_add_flag(status_box, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(status_box, 20);
+    lv_obj_add_event_cb(status_box, wifi_box_clicked_cb, LV_EVENT_CLICKED, NULL);
 
     s_wifi_icon = lv_label_create(status_box);
     lv_label_set_text(s_wifi_icon, LV_SYMBOL_WIFI);
@@ -75,7 +75,9 @@ static void build_card(lv_obj_t *parent, market_card_t *c, const market_item_t *
     lv_obj_clear_flag(c->card, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *kind = lv_label_create(c->card);
-    lv_label_set_text(kind, item->is_crypto ? "CRIPTO" : "AÇÃO");
+    // "BOLSA" instead of "ACAO": the built-in Montserrat font has no
+    // accented glyphs (see ui_theme.h).
+    lv_label_set_text(kind, item->is_crypto ? "CRIPTO" : "BOLSA");
     lv_obj_set_style_text_color(kind, lv_color_hex(COLOR_SUBTEXT), 0);
     lv_obj_align(kind, LV_ALIGN_TOP_LEFT, 0, 0);
 
@@ -144,11 +146,17 @@ void ui_update_wifi_status(const wifi_mgr_status_t *status)
         lv_obj_set_style_text_color(s_wifi_icon, lv_color_hex(COLOR_WIFI_MID), 0);
         lv_label_set_text(s_wifi_text, "conectando...");
         break;
+    case WIFI_MGR_STATE_CONNECT_FAILED:
+        lv_obj_set_style_text_color(s_wifi_icon, lv_color_hex(COLOR_WIFI_BAD), 0);
+        lv_label_set_text(s_wifi_text, "falha ao conectar");
+        break;
     default:
         lv_obj_set_style_text_color(s_wifi_icon, lv_color_hex(COLOR_WIFI_BAD), 0);
         lv_label_set_text(s_wifi_text, "sem WiFi");
         break;
     }
+
+    ui_wifi_notify_status(status);
 
     bsp_display_unlock();
 }
@@ -183,7 +191,7 @@ void ui_refresh_market(void)
         lv_obj_set_style_text_color(c->change_label, lv_color_hex(up ? COLOR_GREEN : COLOR_RED), 0);
 
         int64_t age_s = (now_us - items[i].last_update_us) / 1000000;
-        lv_label_set_text_fmt(c->updated_label, "%" PRId64 "s atrás", age_s);
+        lv_label_set_text_fmt(c->updated_label, "%" PRId64 "s atras", age_s);
     }
 
     bsp_display_unlock();
