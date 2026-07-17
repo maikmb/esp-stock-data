@@ -6,6 +6,7 @@ idf_component_register(
         "market_api.c"
         "ui.c"
         "ui_wifi.c"
+        "ui_touch_debug.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi
