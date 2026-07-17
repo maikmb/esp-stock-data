@@ -32,6 +32,38 @@ mas isso **não foi confirmado contra o esquemático real da placa**. Se o C6
 não for detectado no boot, esse é o primeiro lugar a checar
 (`idf.py menuconfig` → Component config → ESP-Hosted → SDIO pins).
 
+### Bug real já encontrado e corrigido: crash no boot antes do display subir
+
+Em teste real na placa, o firmware travava **antes de `app_main()` rodar** --
+o display nunca chegava a inicializar, o que parecia um problema de
+display/touch mas não era. O log mostrava:
+
+```
+E (1666) HS_MP: mempool create failed: no mem
+assert failed: sdio_mempool_create sdio_drv.c:255 (buf_mp_g)
+```
+
+O transporte SDIO do `esp_hosted` (a ponte P4↔C6) aloca seu pool de buffers
+(~47KB) de RAM interna com capacidade DMA por padrão. No ESP32-P4 essa RAM
+interna DMA-capable é escassa e esgota antes desse ponto do boot, mesmo com
+os 32MB de PSRAM disponíveis (que o `esp_hosted` não usava por padrão para
+esses buffers). A correção -- já aplicada em `sdkconfig.defaults` -- é a
+própria opção que o componente expõe pra esse cenário:
+
+```
+CONFIG_ESP_HOSTED_MEMPOOL_PREFER_SPIRAM=y
+```
+
+Isso faz os buffers de transporte preferirem PSRAM (o GDMA do P4 alcança
+PSRAM através do cache), liberando a RAM interna escassa. Se você clonar
+este repo, atualizar `esp_hosted` para uma versão nova, ou apagar o
+`sdkconfig`, e o boot voltar a travar com esse mesmo assert, comece
+verificando se essa flag ainda está setada.
+
+De passagem, também corrigimos `CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y` -- estava
+no default de 2MB, causando um warning de tamanho de flash divergente em
+todo boot (a placa tem 16MB reais).
+
 ## TLS
 
 `CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y` + `CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y`

@@ -232,8 +232,18 @@ PSRAM/TLS/partição/fontes) — nunca SSID, senha ou API key.
 
 ## Troubleshooting
 
-- **Display não acende**: confira `main/board_config.h` contra o
-  esquemático real da sua placa (ver aviso em [Hardware](#hardware)).
+- **Crash no boot antes de qualquer log da aplicação, com
+  `HS_MP: mempool create failed: no mem` / `assert failed: sdio_mempool_create`**:
+  já aconteceu e já está corrigido em `sdkconfig.defaults`
+  (`CONFIG_ESP_HOSTED_MEMPOOL_PREFER_SPIRAM=y`). O transporte SDIO do
+  esp-hosted tentava alocar seu pool de buffers em RAM interna DMA-capable,
+  que é escassa no P4, e travava antes até do display inicializar (parecia
+  problema de display, não era). Se isso reaparecer depois de mexer em
+  `sdkconfig.defaults`/atualizar o `esp_hosted`, comece checando essa flag —
+  detalhes em [CLOUD.md](CLOUD.md).
+- **Display não acende** (e o boot passa dessa fase sem crashar): confira
+  `main/board_config.h` contra o esquemático real da sua placa (ver aviso em
+  [Hardware](#hardware)).
 - **WiFi nunca conecta / ESP32-C6 não é detectado**: verifique os pinos SDIO
   do esp-hosted em `idf.py menuconfig` → Component config → ESP-Hosted, e
   compare com o esquemático da JC1060P470 (ver

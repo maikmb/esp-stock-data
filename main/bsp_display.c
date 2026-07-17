@@ -56,6 +56,11 @@ static esp_err_t bsp_lcd_init(esp_lcd_panel_handle_t *ret_panel, esp_lcd_panel_i
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, ret_io), TAG, "create panel IO failed");
 
     esp_lcd_dpi_panel_config_t dpi_config = JD9165_1024_600_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB565);
+    // Two frame buffers, owned by the DPI driver in PSRAM: required by the
+    // avoid_tearing/full_refresh path below (esp_lcd_dpi_panel_get_frame_buffer
+    // hands LVGL these buffers directly instead of bouncing through a
+    // partial SRAM buffer + async "done" callback).
+    dpi_config.num_fbs = 2;
     jd9165_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
@@ -128,13 +133,22 @@ esp_err_t bsp_display_start(void)
     const lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "lvgl_port_init failed");
 
-    // Buffer size/flags mirror Espressif's own esp32_p4_function_ev_board BSP
-    // defaults for a MIPI-DSI RGB565 panel of this class.
+    // Full-frame double buffering, backed directly by the DPI panel's own
+    // PSRAM frame buffers (avoid_tearing=true below). We tried the
+    // partial-buffer/non-tearing-avoidance path first (matching the official
+    // P4-EV-board BSP defaults for a different panel/driver combo), but for
+    // this panel lv_disp_flush_ready() never fired past the first chunk --
+    // LVGL stalled after drawing one partial region and the rest of the
+    // screen showed raw, uninitialized PSRAM content. This full_refresh +
+    // avoid_tearing combination is what esp_lvgl_port actually supports for
+    // DSI panels beyond the single-flush-region case, and matches what the
+    // board vendor's own working demo does (full-screen buffers, no partial
+    // flush).
     const lvgl_port_display_cfg_t disp_cfg = {
         .io_handle = io_handle,
         .panel_handle = panel_handle,
-        .buffer_size = BOARD_LCD_H_RES * 50,
-        .double_buffer = false,
+        .buffer_size = BOARD_LCD_H_RES * BOARD_LCD_V_RES,
+        .double_buffer = true,
         .hres = BOARD_LCD_H_RES,
         .vres = BOARD_LCD_V_RES,
         .monochrome = false,
@@ -145,17 +159,17 @@ esp_err_t bsp_display_start(void)
         },
         .color_format = LV_COLOR_FORMAT_RGB565,
         .flags = {
-            .buff_dma = true,
+            .buff_dma = false,
             .buff_spiram = false,
             .sw_rotate = false,
             .swap_bytes = false,
-            .full_refresh = false,
+            .full_refresh = true,
             .direct_mode = false,
         },
     };
     const lvgl_port_display_dsi_cfg_t dpi_cfg = {
         .flags = {
-            .avoid_tearing = false,
+            .avoid_tearing = true,
         },
     };
     s_disp = lvgl_port_add_disp_dsi(&disp_cfg, &dpi_cfg);

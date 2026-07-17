@@ -5,6 +5,19 @@ CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
 # by main/idf_component.yml.
 CONFIG_ESP_WIFI_REMOTE_LIBRARY_HOSTED=y
 
+# esp-hosted's SDIO transport allocates its buffer mempool from internal
+# DMA-capable RAM by default, which is scarce enough on the P4 that it can
+# fail to allocate even the ~47KB pool at boot (observed: hard crash in
+# sdio_mempool_create before app_main ever runs, well before our own display
+# init gets a chance -- looked like the display just never came up). The P4's
+# GDMA can reach PSRAM through cache, so let the transport buffers live there
+# instead and leave internal RAM free.
+CONFIG_ESP_HOSTED_MEMPOOL_PREFER_SPIRAM=y
+
+# The board has 16MB flash; without this esptool falls back to a 2MB
+# assumption and logs a size-mismatch warning on every boot.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
 # 32MB Hex-mode PSRAM (JC1060P470 module spec) -- needed for the LVGL
 # display buffers and the WiFi/TLS stack's working memory.
 CONFIG_SPIRAM=y

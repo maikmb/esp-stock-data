@@ -15,6 +15,11 @@ touch, rodando em uma placa ESP32-P4 com display MIPI-DSI de 7".
   referência do fabricante, **não foi validada fisicamente por mim** — se o
   display/touch não subirem, comece checando esses pinos contra o esquemático
   da sua revisão de placa. Detalhes completos em [CLOUD.md](CLOUD.md).
+- Já apareceu em teste real um crash no boot, *antes* do display inicializar,
+  que parecia bug de display mas era o `esp_hosted` (ponte WiFi P4↔C6)
+  falhando ao alocar seu pool de buffers em RAM interna. Corrigido via
+  `CONFIG_ESP_HOSTED_MEMPOOL_PREFER_SPIRAM=y` em `sdkconfig.defaults` — ver
+  CLOUD.md antes de investigar qualquer "display não inicializa" a fundo.
 
 ## Arquitetura do firmware (main/)
 

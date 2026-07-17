@@ -14,6 +14,6 @@
     "--query-driver=**",
     "--compile-commands-dir=c:\\Github\\esp32p4\\stock-data\\station\\build"
   ],
-  "idf.portWin": "COM6",
+  "idf.portWin": "COM7",
   "idf.flashType": "UART"
 }

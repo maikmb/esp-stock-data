@@ -127,6 +127,10 @@ void ui_init(void)
 
 void ui_update_wifi_status(const wifi_mgr_status_t *status)
 {
+    // WiFi events can fire before ui_init() has built the widgets.
+    if (!s_wifi_icon || !s_wifi_text) {
+        return;
+    }
     if (!bsp_display_lock(200)) {
         return;
     }
@@ -151,6 +155,10 @@ void ui_update_wifi_status(const wifi_mgr_status_t *status)
 
 void ui_refresh_market(void)
 {
+    if (s_card_count == 0) {
+        return;
+    }
+
     market_item_t items[MARKET_MAX_ITEMS];
     size_t n = market_get_items(items, MARKET_MAX_ITEMS);
 

@@ -141,6 +141,15 @@ esp_err_t wifi_manager_start(wifi_mgr_status_cb_t cb, void *user_ctx)
 
 void wifi_manager_get_status(wifi_mgr_status_t *out)
 {
+    // The market task starts before wifi_manager_start() (app_main brings the
+    // symbol list up first so the UI knows how many cards to build) and polls
+    // this immediately -- taking a NULL mutex trips a FreeRTOS assert and
+    // reboots the board, so report "disconnected" until we're initialized.
+    if (!s_status_mutex) {
+        memset(out, 0, sizeof(*out));
+        out->state = WIFI_MGR_STATE_DISCONNECTED;
+        return;
+    }
     xSemaphoreTake(s_status_mutex, portMAX_DELAY);
     *out = s_status;
     xSemaphoreGive(s_status_mutex);
