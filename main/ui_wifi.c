@@ -30,6 +30,7 @@ static char s_sel_ssid[33];
 static bool s_sel_secure;
 static bool s_connect_failed;  // show the error hint in the password view
 static bool s_scan_running;
+static lv_timer_t *s_scan_delay_timer;
 
 static void show_scan_view(bool trigger_scan);
 static void show_password_view(void);
@@ -40,6 +41,10 @@ static void show_details_view(void);
 
 static void close_panel(void)
 {
+    if (s_scan_delay_timer) {
+        lv_timer_delete(s_scan_delay_timer);
+        s_scan_delay_timer = NULL;
+    }
     if (s_overlay) {
         lv_obj_delete(s_overlay);
     }
@@ -167,6 +172,29 @@ static void start_scan(void)
     if (wifi_manager_scan_start(scan_done_cb, NULL) == ESP_OK) {
         s_scan_running = true;
     }
+}
+
+static void scan_delay_timer_cb(lv_timer_t *timer)
+{
+    s_scan_delay_timer = NULL;
+    if (s_overlay && s_view == VIEW_SCAN) {
+        show_scan_view(true);
+    } else {
+        s_scan_running = false;
+    }
+}
+
+// Starting a scan right after esp_wifi_disconnect() fails: over the
+// esp-hosted RPC the C6 is still tearing the connection down. Wait a bit,
+// then scan (spinner shows in the meantime).
+static void schedule_scan(uint32_t delay_ms)
+{
+    if (s_scan_delay_timer) {
+        lv_timer_delete(s_scan_delay_timer);
+    }
+    s_scan_running = true;
+    s_scan_delay_timer = lv_timer_create(scan_delay_timer_cb, delay_ms, NULL);
+    lv_timer_set_repeat_count(s_scan_delay_timer, 1);
 }
 
 static void refresh_btn_cb(lv_event_t *e)
@@ -406,8 +434,15 @@ static void add_detail_row(lv_obj_t *parent, const char *name, const char *value
 
 static void disconnect_btn_cb(lv_event_t *e)
 {
+    // wifi_manager_disconnect() fires the status callback synchronously,
+    // which lands in ui_wifi_notify_status() and switches to the scan view
+    // with a delayed scan. The fallback below only runs if no status
+    // callback is wired up.
     wifi_manager_disconnect();
-    show_scan_view(true);
+    if (s_view == VIEW_DETAILS) {
+        schedule_scan(800);
+        show_scan_view(false);
+    }
 }
 
 static void show_details_view(void)
@@ -498,7 +533,10 @@ void ui_wifi_notify_status(const wifi_mgr_status_t *status)
         break;
     case VIEW_DETAILS:
         if (status->state != WIFI_MGR_STATE_CONNECTED) {
-            show_scan_view(true);
+            // Connection dropped (or user hit disconnect): go back to the
+            // network list, scanning only after the radio settles.
+            schedule_scan(800);
+            show_scan_view(false);
         }
         break;
     default:

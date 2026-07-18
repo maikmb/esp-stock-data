@@ -44,10 +44,9 @@ component registry).
 
 ## Convenções
 
-- Config de usuário (SSID, senha, API keys, símbolos monitorados, intervalo
-  de refresh) fica em `main/Kconfig.projbuild`, ajustável via
-  `idf.py menuconfig` → "Stock Ticker Configuration". Não hardcode esses
-  valores no `.c`.
+- Config de usuário (API keys, símbolos monitorados, intervalo de refresh)
+  fica em `main/Kconfig.projbuild`, ajustável via `idf.py menuconfig` →
+  "Stock Ticker Configuration". Não hardcode esses valores no `.c`.
 - `sdkconfig` e `sdkconfig.old` são gerados e não versionados — mudanças
   persistentes de configuração vão em `sdkconfig.defaults`.
 - Dependências gerenciadas (LVGL, esp_lvgl_port, esp_lcd_touch_gt911,
@@ -57,9 +56,9 @@ component registry).
   (`bsp_display_lock()` / `bsp_display_unlock()`) — ver `ui_update_wifi_status`
   e `ui_refresh_market` como exemplo. O lock é recursivo, então callbacks
   aninhados podem tomá-lo de novo sem deadlock.
-- Credenciais WiFi escolhidas pela tela ficam em NVS (namespace `wifi_cfg`)
-  e têm prioridade sobre `CONFIG_ESP_WIFI_SSID`/`PASSWORD` no boot — o
-  Kconfig é só fallback de primeiro uso.
+- Credenciais WiFi vivem **só em NVS** (namespace `wifi_cfg`), gravadas pelo
+  painel WiFi da tela (`ui_wifi.c`). Não existe SSID/senha no Kconfig — num
+  device zerado o WiFi é configurado inteiramente on-screen.
 - As fontes Montserrat embutidas do LVGL só cobrem ASCII — não use acentos
   em strings exibidas na tela (por isso "BOLSA"/"atras" em vez de
   "AÇÃO"/"atrás").

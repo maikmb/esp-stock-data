@@ -49,7 +49,8 @@ firmware ESP-IDF (C) sobre um ESP32-P4 com display MIPI-DSI de 7".
   desconectado, ele escaneia as redes próximas e permite conectar digitando a
   senha num teclado na tela; conectado, mostra detalhes da conexão (IP,
   sinal, gateway, canal, BSSID) e um botão de desconectar. A rede escolhida
-  fica salva em NVS e tem prioridade sobre o SSID/senha do Kconfig no boot.
+  fica salva em NVS e reconecta sozinha no boot. **Não existe SSID/senha no
+  menuconfig** — o WiFi é configurado exclusivamente pela tela.
 - Busca preço de criptomoedas (CoinGecko) e ações (Alpha Vantage) por HTTPS
   em background e mostra um card por símbolo: preço, variação % (colorida
   verde/vermelho) e "atualizado há Ns".
@@ -216,17 +217,17 @@ Tudo em **Stock Ticker Configuration**:
 
 | Menu | Opção | Descrição |
 |---|---|---|
-| WiFi | SSID / Senha | fallback de primeiro boot — a rede escolhida no painel WiFi da tela fica em NVS (namespace `wifi_cfg`) e tem prioridade |
-| WiFi | Fast retry attempts | tentativas rápidas antes de cair pro backoff de 15s |
+| WiFi | Fast retry attempts | tentativas rápidas antes de cair pro backoff de 15s (SSID/senha não ficam aqui: são escolhidos no painel WiFi da tela e salvos em NVS, namespace `wifi_cfg`) |
 | Market Data API | Alpha Vantage API key | grátis em [alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) — necessária só para ações |
 | Market Data API | CoinGecko coin IDs | ex: `bitcoin,ethereum` (sem key necessária) |
 | Market Data API | Stock symbols | ex: `AAPL,MSFT,PETR4.SAO` (precisa da key acima) |
 | Market Data API | Refresh interval | padrão 60s — ver limite da Alpha Vantage acima |
 
-Nenhuma credencial fica hardcoded em `.c`: tudo entra via Kconfig e cai no
-`sdkconfig` (gerado, não versionado). `sdkconfig.defaults` só guarda valores
-que fazem sentido compartilhar entre quem clona o repo (config de
-PSRAM/TLS/partição/fontes) — nunca SSID, senha ou API key.
+Nenhuma credencial fica hardcoded em `.c`: API keys entram via Kconfig e
+caem no `sdkconfig` (gerado, não versionado); credenciais de WiFi nem passam
+pelo build — vivem só em NVS, gravadas pela tela. `sdkconfig.defaults` só
+guarda valores que fazem sentido compartilhar entre quem clona o repo
+(config de PSRAM/TLS/partição/fontes) — nunca API key.
 
 ## Convenções do projeto
 

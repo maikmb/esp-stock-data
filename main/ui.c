@@ -184,14 +184,21 @@ void ui_refresh_market(void)
             continue;
         }
 
-        lv_label_set_text_fmt(c->price_label, "$%.2f", items[i].price);
+        // Format with libc snprintf, not lv_label_set_text_fmt: LVGL's builtin
+        // sprintf ships with %f support compiled out (LV_USE_FLOAT=0), which
+        // rendered these labels literally as "$f".
+        char buf[48];
+        snprintf(buf, sizeof(buf), "$%.2f", items[i].price);
+        lv_label_set_text(c->price_label, buf);
 
         bool up = items[i].change_pct >= 0;
-        lv_label_set_text_fmt(c->change_label, "%s %.2f%%", up ? LV_SYMBOL_UP : LV_SYMBOL_DOWN, items[i].change_pct);
+        snprintf(buf, sizeof(buf), "%s %.2f%%", up ? LV_SYMBOL_UP : LV_SYMBOL_DOWN, items[i].change_pct);
+        lv_label_set_text(c->change_label, buf);
         lv_obj_set_style_text_color(c->change_label, lv_color_hex(up ? COLOR_GREEN : COLOR_RED), 0);
 
         int64_t age_s = (now_us - items[i].last_update_us) / 1000000;
-        lv_label_set_text_fmt(c->updated_label, "%" PRId64 "s atras", age_s);
+        snprintf(buf, sizeof(buf), "%llds atras", (long long)age_s);
+        lv_label_set_text(c->updated_label, buf);
     }
 
     bsp_display_unlock();

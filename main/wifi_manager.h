@@ -42,10 +42,11 @@ typedef void (*wifi_mgr_scan_cb_t)(void *user_ctx);
 /**
  * @brief Bring up WiFi station mode and keep it connected in the background.
  *
- * Credentials come from NVS (namespace "wifi_cfg", written by
- * wifi_manager_connect) with CONFIG_ESP_WIFI_SSID/PASSWORD as first-boot
- * fallback. With no credentials at all the radio still starts (so scanning
- * works) but no connection is attempted.
+ * Credentials come exclusively from NVS (namespace "wifi_cfg", written by
+ * wifi_manager_connect when a network picked on the WiFi panel connects).
+ * On a fresh device there are no credentials: the radio still starts (so
+ * scanning works) but no connection is attempted until the user picks a
+ * network on-screen.
  *
  * Non-blocking: kicks off the connection attempt and returns immediately.
  * On ESP32-P4 this runs over the onboard ESP32-C6 via esp_wifi_remote/esp-hosted,

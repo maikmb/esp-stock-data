@@ -2,22 +2,9 @@ menu "Stock Ticker Configuration"
 
     menu "WiFi"
 
-        config ESP_WIFI_SSID
-            string "WiFi SSID (first-boot fallback)"
-            default "myssid"
-            help
-                SSID (network name) to connect to when no network has been
-                configured from the on-screen WiFi panel yet. Networks picked
-                on the touch screen are saved to NVS and take priority over
-                this value. May be left empty to always configure on-screen.
-
-        config ESP_WIFI_PASSWORD
-            string "WiFi Password (first-boot fallback)"
-            default "mypassword"
-            help
-                WiFi password (WPA2/WPA3) for ESP_WIFI_SSID. Like the SSID,
-                only used until a network is configured on-screen (stored in
-                NVS namespace "wifi_cfg").
+        # SSID/password are intentionally NOT configurable here: networks are
+        # picked from the on-screen WiFi panel (scan + password keyboard) and
+        # persisted in NVS namespace "wifi_cfg".
 
         config ESP_MAXIMUM_RETRY
             int "Fast retry attempts before backoff"

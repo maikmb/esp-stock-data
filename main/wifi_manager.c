@@ -314,15 +314,14 @@ esp_err_t wifi_manager_start(wifi_mgr_status_cb_t cb, void *user_ctx)
     }
     ESP_ERROR_CHECK(ret);
 
-    // Boot credentials: NVS (set from the on-screen WiFi panel) wins over
-    // the Kconfig fallback.
+    // Boot credentials come exclusively from NVS, written by
+    // wifi_manager_connect() when a network picked on the WiFi panel
+    // connects successfully. No Kconfig fallback: on a fresh device the
+    // user configures WiFi entirely on-screen.
     char ssid[33] = {0};
     char pass[65] = {0};
     if (nvs_load_creds(ssid, sizeof(ssid), pass, sizeof(pass))) {
-        ESP_LOGI(TAG, "using credentials from NVS (SSID '%s')", ssid);
-    } else {
-        strlcpy(ssid, CONFIG_ESP_WIFI_SSID, sizeof(ssid));
-        strlcpy(pass, CONFIG_ESP_WIFI_PASSWORD, sizeof(pass));
+        ESP_LOGI(TAG, "using saved network from NVS (SSID '%s')", ssid);
     }
     s_have_creds = ssid[0] != '\0';
     strlcpy(s_status.ssid, ssid, sizeof(s_status.ssid));
