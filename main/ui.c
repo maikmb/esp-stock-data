@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "ui_theme.h"
 #include "ui_wifi.h"
+#include "ui_symbols.h"
 #include "bsp_display.h"
 #include "market_api.h"
 
@@ -28,6 +29,11 @@ static void wifi_box_clicked_cb(lv_event_t *e)
     ui_wifi_open();
 }
 
+static void settings_clicked_cb(lv_event_t *e)
+{
+    ui_symbols_open();
+}
+
 static lv_obj_t *build_top_bar(lv_obj_t *parent)
 {
     lv_obj_t *bar = lv_obj_create(parent);
@@ -44,7 +50,13 @@ static lv_obj_t *build_top_bar(lv_obj_t *parent)
     lv_obj_set_style_text_color(title, lv_color_hex(COLOR_TEXT), 0);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
 
-    lv_obj_t *status_box = lv_obj_create(bar);
+    lv_obj_t *right = lv_obj_create(bar);
+    lv_obj_remove_style_all(right);
+    lv_obj_set_flex_flow(right, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(right, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(right, 28, 0);
+
+    lv_obj_t *status_box = lv_obj_create(right);
     lv_obj_remove_style_all(status_box);
     lv_obj_set_flex_flow(status_box, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(status_box, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -60,6 +72,13 @@ static lv_obj_t *build_top_bar(lv_obj_t *parent)
     s_wifi_text = lv_label_create(status_box);
     lv_label_set_text(s_wifi_text, "conectando...");
     lv_obj_set_style_text_color(s_wifi_text, lv_color_hex(COLOR_SUBTEXT), 0);
+
+    lv_obj_t *gear = lv_label_create(right);
+    lv_label_set_text(gear, LV_SYMBOL_SETTINGS);
+    lv_obj_set_style_text_color(gear, lv_color_hex(COLOR_SUBTEXT), 0);
+    lv_obj_add_flag(gear, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(gear, 20);
+    lv_obj_add_event_cb(gear, settings_clicked_cb, LV_EVENT_CLICKED, NULL);
 
     return bar;
 }
@@ -103,6 +122,20 @@ static void build_card(lv_obj_t *parent, market_card_t *c, const market_item_t *
     lv_obj_align(c->updated_label, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
 }
 
+void ui_market_rebuild(void)
+{
+    if (!s_grid) {
+        return;
+    }
+    lv_obj_clean(s_grid);
+
+    market_item_t items[MARKET_MAX_ITEMS];
+    s_card_count = market_get_items(items, MARKET_MAX_ITEMS);
+    for (size_t i = 0; i < s_card_count; i++) {
+        build_card(s_grid, &s_cards[i], &items[i]);
+    }
+}
+
 void ui_init(void)
 {
     lv_obj_t *scr = lv_screen_active();
@@ -120,11 +153,7 @@ void ui_init(void)
     lv_obj_set_style_pad_gap(s_grid, 16, 0);
     lv_obj_set_flex_flow(s_grid, LV_FLEX_FLOW_ROW_WRAP);
 
-    market_item_t items[MARKET_MAX_ITEMS];
-    s_card_count = market_get_items(items, MARKET_MAX_ITEMS);
-    for (size_t i = 0; i < s_card_count; i++) {
-        build_card(s_grid, &s_cards[i], &items[i]);
-    }
+    ui_market_rebuild();
 }
 
 void ui_update_wifi_status(const wifi_mgr_status_t *status)

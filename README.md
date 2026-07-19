@@ -54,8 +54,14 @@ firmware ESP-IDF (C) sobre um ESP32-P4 com display MIPI-DSI de 7".
 - Busca preço de criptomoedas (CoinGecko) e ações (Alpha Vantage) por HTTPS
   em background e mostra um card por símbolo: preço, variação % (colorida
   verde/vermelho) e "atualizado há Ns".
-- Lista de símbolos monitorados, credenciais e intervalo de atualização são
-  100% configuráveis via `idf.py menuconfig` — nada hardcoded no `.c`.
+- **Tickers editáveis pela tela**: o ícone de engrenagem abre um painel para
+  listar/remover/adicionar símbolos. Ao digitar um ticker novo, o firmware
+  consulta o `/search` da CoinGecko para classificá-lo automaticamente como
+  cripto (resolvendo o id que a API de preço usa, ex. `BTC` → `bitcoin`) ou
+  ação (Alpha Vantage) — com opção manual para tickers que existem nos dois
+  mundos. A lista fica em NVS; o menuconfig fornece só os padrões de fábrica.
+- Intervalo de atualização e API key são configuráveis via
+  `idf.py menuconfig` — nada hardcoded no `.c`.
 - Reconexão de WiFi automática e permanente (o dispositivo é pensado pra
   ficar ligado numa prateleira mostrando preços, não para desistir depois de
   N tentativas).
@@ -85,6 +91,7 @@ wifi_manager_start()  -- conecta WiFi; status atualiza a UI por callback
 | [main/market_api.c/h](main/market_api.c) | Task de fundo: HTTPS + cJSON contra CoinGecko/Alpha Vantage → lista de `market_item_t` thread-safe |
 | [main/ui.c/h](main/ui.c) | Tela LVGL: barra de status WiFi + grade de cards de preço. Só conhece `market_item_t`, nunca fala com as APIs diretamente |
 | [main/ui_wifi.c/h](main/ui_wifi.c) | Painel WiFi (overlay): lista de redes escaneadas, teclado de senha, detalhes da conexão + desconectar. Só usa a API do `wifi_manager` |
+| [main/ui_symbols.c/h](main/ui_symbols.c) | Painel de tickers (overlay): listar/remover/adicionar símbolos com classificação automática cripto vs ação via `market_lookup()` |
 | [main/ui_theme.h](main/ui_theme.h) | Paleta de cores compartilhada entre os módulos de UI |
 | [main/app_main.c](main/app_main.c) | Orquestra a ordem de inicialização acima |
 | [components/esp_lcd_jd9165/](components/esp_lcd_jd9165/) | Driver do painel MIPI-DSI, vendorizado da firmware do fabricante (não existe no component registry do ESP-IDF) |
@@ -174,6 +181,7 @@ main/
   market_api.c/h        task de fundo: HTTPS + JSON -> lista de market_item_t
   ui.c/h                 tela LVGL: status WiFi + cards de preço
   ui_wifi.c/h            painel WiFi: scan de redes, senha via teclado, detalhes
+  ui_symbols.c/h         painel de tickers: add/remove com deteccao cripto/acao
   ui_theme.h             cores compartilhadas da UI
   Kconfig.projbuild     opções de menuconfig (WiFi, símbolos, API keys)
   idf_component.yml    dependências gerenciadas (lvgl, esp_lvgl_port, ...)
@@ -219,8 +227,8 @@ Tudo em **Stock Ticker Configuration**:
 |---|---|---|
 | WiFi | Fast retry attempts | tentativas rápidas antes de cair pro backoff de 15s (SSID/senha não ficam aqui: são escolhidos no painel WiFi da tela e salvos em NVS, namespace `wifi_cfg`) |
 | Market Data API | Alpha Vantage API key | grátis em [alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key) — necessária só para ações |
-| Market Data API | CoinGecko coin IDs | ex: `bitcoin,ethereum` (sem key necessária) |
-| Market Data API | Stock symbols | ex: `AAPL,MSFT,PETR4.SAO` (precisa da key acima) |
+| Market Data API | Default CoinGecko coin IDs | padrões de fábrica, ex: `bitcoin,ethereum` — ignorados após a primeira edição da lista pela tela (NVS passa a mandar) |
+| Market Data API | Default stock symbols | idem, ex: `AAPL,MSFT,PETR4.SAO` (ações precisam da key acima) |
 | Market Data API | Refresh interval | padrão 60s — ver limite da Alpha Vantage acima |
 
 Nenhuma credencial fica hardcoded em `.c`: API keys entram via Kconfig e
@@ -270,9 +278,9 @@ guarda valores que fazem sentido compartilhar entre quem clona o repo
 
 - ~~Configurar o WiFi pela própria tela (scan + senha + NVS)~~ — feito, ver
   `main/ui_wifi.c`.
-- Tela de configuração na própria interface touch para adicionar/remover
-  símbolos em tempo real, persistindo em NVS (hoje é só via Kconfig +
-  rebuild).
+- ~~Adicionar/remover símbolos pela tela, persistindo em NVS~~ — feito, ver
+  `main/ui_symbols.c` (com classificação automática cripto vs ação via
+  CoinGecko `/search`).
 - Mapear ids da CoinGecko para tickers curtos (hoje o card mostra o id
   capitalizado, ex. "Bitcoin", não "BTC").
 - Sincronizar hora via SNTP para mostrar horário real da última cotação em

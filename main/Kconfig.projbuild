@@ -28,18 +28,21 @@ menu "Stock Ticker Configuration"
                 Crypto quotes via CoinGecko do not need a key.
 
         config MARKET_CRYPTO_IDS
-            string "CoinGecko coin IDs (comma separated)"
+            string "Default CoinGecko coin IDs (comma separated)"
             default "bitcoin,ethereum"
             help
-                CoinGecko API coin ids, e.g. "bitcoin,ethereum,solana".
-                Find ids at https://api.coingecko.com/api/v3/coins/list
+                Factory-default crypto list, e.g. "bitcoin,ethereum,solana"
+                (CoinGecko ids: https://api.coingecko.com/api/v3/coins/list).
+                Only used until the list is edited on-screen (gear icon):
+                after that the list lives in NVS and this value is ignored.
 
         config MARKET_STOCK_SYMBOLS
-            string "Stock ticker symbols (comma separated)"
+            string "Default stock ticker symbols (comma separated)"
             default "AAPL,MSFT"
             help
-                Stock symbols to query via Alpha Vantage GLOBAL_QUOTE,
-                e.g. "AAPL,MSFT,PETR4.SAO". Leave empty to show crypto only.
+                Factory-default stock list for Alpha Vantage GLOBAL_QUOTE,
+                e.g. "AAPL,MSFT,PETR4.SAO". Like the crypto ids, ignored once
+                the user edits the ticker list on-screen (stored in NVS).
 
         config MARKET_REFRESH_INTERVAL_SEC
             int "Refresh interval (seconds)"

@@ -29,11 +29,18 @@ touch, rodando em uma placa ESP32-P4 com display MIPI-DSI de 7".
 - `wifi_manager.c/h` — WiFi station, reconexão automática, expõe status
   para a UI via callback + snapshot thread-safe
 - `market_api.c/h` — task em background que consulta CoinGecko (cripto) e
-  Alpha Vantage (ações) via HTTPS/cJSON e mantém uma lista de `market_item_t`
+  Alpha Vantage (ações) via HTTPS/cJSON e mantém uma lista de `market_item_t`.
+  Lista editável em runtime (`market_add_item`/`market_remove_item`,
+  persistida em NVS `market_cfg`; Kconfig é só seed de fábrica) e
+  `market_lookup()` classifica ticker digitado como cripto vs ação via
+  CoinGecko `/search`
 - `ui.c/h` — tela LVGL: barra de status WiFi + cards de preço por símbolo
 - `ui_wifi.c/h` — painel WiFi em overlay: scan de redes, conectar com senha
   via teclado na tela, detalhes da conexão + desconectar. Só usa a API do
   `wifi_manager` (nunca `esp_wifi.h` direto)
+- `ui_symbols.c/h` — painel de tickers em overlay (engrenagem na barra):
+  listar/remover/adicionar símbolos; classificação cripto vs ação via
+  `market_lookup()`. Só usa a API do `market_api`
 - `ui_theme.h` — paleta de cores compartilhada da UI
 - `app_main.c` — orquestra a ordem de start: display → market task → UI →
   wifi
@@ -76,9 +83,10 @@ idf.py -p COMx flash monitor
 
 ## Roadmap (contexto do que vem a seguir)
 
-O WiFi já é configurável pela tela (`ui_wifi.c`: scan + senha + NVS). O
-próximo passo é o equivalente para os símbolos monitorados:
-adicionar/remover índices pela própria tela touch (persistindo em NVS) e
-trocar de provedor de API sem reescrever `ui.c`. Ao adicionar essa tela de
-configuração, mantenha `market_api.c` como a única camada que fala com as
-APIs externas -- `ui.c` não deve saber nada sobre CoinGecko/Alpha Vantage.
+WiFi (`ui_wifi.c`) e lista de tickers (`ui_symbols.c`) já são configuráveis
+pela tela, com persistência em NVS. Próximos passos prováveis: SNTP para
+horário real, mapear nomes de cripto para tickers curtos nos cards, e
+avaliar provedor de ações com free tier menos restritivo. Ao evoluir,
+mantenha `market_api.c` como a única camada que fala com as APIs externas --
+`ui.c`/`ui_symbols.c` não devem saber nada sobre CoinGecko/Alpha Vantage
+além do que a API do `market_api` expõe.

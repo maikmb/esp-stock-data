@@ -22,6 +22,13 @@ void ui_update_wifi_status(const wifi_mgr_status_t *status);
 /** Re-read market_get_items() and refresh all cards. Takes the LVGL lock itself. */
 void ui_refresh_market(void);
 
+/**
+ * @brief Rebuild the card grid from the current tracked-symbol list. Call
+ * after market_add_item()/market_remove_item(). Caller must hold the LVGL
+ * lock (LVGL event callbacks already do).
+ */
+void ui_market_rebuild(void);
+
 #ifdef __cplusplus
 }
 #endif
