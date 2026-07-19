@@ -47,15 +47,21 @@ static bool s_scan_in_progress;
 static wifi_mgr_scan_cb_t s_scan_cb;
 static void *s_scan_cb_ctx;
 
-static void notify_status_locked(void)
+// The status callback must run OUTSIDE s_status_mutex: UI handlers react by
+// calling back into wifi_manager getters (wifi_manager_get_status /
+// _get_scan_results), which take this same non-recursive mutex. Notifying
+// while holding it self-deadlocked the LVGL task -- frozen screen when
+// tapping "Desconectar".
+static void notify_status(const wifi_mgr_status_t *snapshot)
 {
     if (s_status_cb) {
-        s_status_cb(&s_status, s_status_cb_ctx);
+        s_status_cb(snapshot, s_status_cb_ctx);
     }
 }
 
 static void set_state(wifi_mgr_state_t state)
 {
+    wifi_mgr_status_t snapshot;
     xSemaphoreTake(s_status_mutex, portMAX_DELAY);
     s_status.state = state;
     if (state != WIFI_MGR_STATE_CONNECTED) {
@@ -66,8 +72,10 @@ static void set_state(wifi_mgr_state_t state)
         s_status.channel = 0;
         s_status.rssi = 0;
     }
-    notify_status_locked();
+    snapshot = s_status;
     xSemaphoreGive(s_status_mutex);
+
+    notify_status(&snapshot);
 }
 
 static bool nvs_load_creds(char *ssid, size_t ssid_len, char *pass, size_t pass_len)
@@ -282,6 +290,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         wifi_ap_record_t ap_info = {0};
         esp_wifi_sta_get_ap_info(&ap_info);
 
+        wifi_mgr_status_t snapshot;
         xSemaphoreTake(s_status_mutex, portMAX_DELAY);
         s_status.state = WIFI_MGR_STATE_CONNECTED;
         snprintf(s_status.ip, sizeof(s_status.ip), IPSTR, IP2STR(&event->ip_info.ip));
@@ -291,10 +300,12 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         memcpy(s_status.bssid, ap_info.bssid, sizeof(s_status.bssid));
         s_status.channel = ap_info.primary;
         s_status.rssi = ap_info.rssi;
-        notify_status_locked();
+        snapshot = s_status;
         xSemaphoreGive(s_status_mutex);
 
-        ESP_LOGI(TAG, "got ip: %s rssi: %d", s_status.ip, s_status.rssi);
+        notify_status(&snapshot);
+
+        ESP_LOGI(TAG, "got ip: %s rssi: %d", snapshot.ip, snapshot.rssi);
     }
 }
 
